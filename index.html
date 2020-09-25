@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Scanner Demo</title>
+</head>
+<body>
+<style>
+    hr {
+        margin-top: 32px;
+    }
+    input[type="file"] {
+        display: block;
+        margin-bottom: 16px;
+    }
+    div {
+        margin-bottom: 16px;
+    }
+    #flash-toggle {
+        display: none;
+    }
+</style>
+<h1>Scan from WebCam:</h1>
+<div>
+    <b>Device has camera: </b>
+    <span id="cam-has-camera"></span>
+    <br>
+    <b>Device has flash: </b>
+    <span id="cam-has-flash"></span>
+    <br>
+    <video id="qr-video"></video>
+    <br>
+    <label>
+        <input id="show-scan-region" type="checkbox">
+        Show scan region
+    </label>
+</div>
+<div>
+    <button id="flash-toggle">📸 Flash: <span id="flash-state">off</span></button>
+</div>
+<div>
+    <select id="inversion-mode-select">
+        <option value="original">Scan original (dark QR code on bright background)</option>
+        <option value="invert">Scan with inverted colors (bright QR code on dark background)</option>
+        <option value="both">Scan both</option>
+    </select>
+    <br>
+</div>
+<b>Detected QR code: </b>
+<span id="cam-qr-result">None</span>
+<br>
+<b>Last detected at: </b>
+<span id="cam-qr-result-timestamp"></span>
+<br>
+<button id="start-button">Start</button>
+<button id="stop-button">Stop</button>
+<hr>
+
+<h1>Scan from File:</h1>
+<input type="file" id="file-selector">
+<b>Detected QR code: </b>
+<span id="file-qr-result">None</span>
+
+<hr>
+<h1>Detected NHS COVID-19 venue:</h1>
+<b>ID: </b>
+<span id="venue-id-result">TBC</span>
+<br>
+<b>Name: </b>
+<span id="venue-name-result">TBC</span>
+<br>
+<b>Postcode: </b>
+<span id="venue-pc-result">TBC</span>
+
+<script src="jwt-decode.min.js"></script>
+<script type="module">
+    import QrScanner from "../qr-scanner.min.js";
+    QrScanner.WORKER_PATH = '../qr-scanner-worker.min.js';
+
+    const video = document.getElementById('qr-video');
+    const camHasCamera = document.getElementById('cam-has-camera');
+    const camHasFlash = document.getElementById('cam-has-flash');
+    const flashToggle = document.getElementById('flash-toggle');
+    const flashState = document.getElementById('flash-state');
+    const camQrResult = document.getElementById('cam-qr-result');
+    const camQrResultTimestamp = document.getElementById('cam-qr-result-timestamp');
+    const fileSelector = document.getElementById('file-selector');
+    const fileQrResult = document.getElementById('file-qr-result');
+    const venueIdResult = document.getElementById('venue-id-result');
+    const venueNameResult = document.getElementById('venue-name-result');
+    const venuePostcodeResult = document.getElementById('venue-pc-result');
+
+    // var test = 'UKC19TRACING:1:eyJhbGciOiJFUzI1NiIsImtpZCI6IllycWVMVHE4ei1vZkg1bnpsYVNHbllSZkI5YnU5eVBsV1lVXzJiNnFYT1EifQ.eyJpZCI6IjVZM1Y0Mk01Iiwib3BuIjoiQmFybmFyZCBDYXN0bGUiLCJ2dCI6IjAwMCIsInBjIjoiREwxMjhQUiJ9.gINSi7vSZ3hnYceo1BvKF2TLeQHcCpiYbBxn6MvljICKGEfamrT6E1anNpyJl7kAhV0QYO6pQEFsJvPUhE91Iw';
+    // setVenueResult(test);
+
+    function setResult(label, result) {
+        label.textContent = result;
+        camQrResultTimestamp.textContent = new Date().toString();
+        label.style.color = 'teal';
+        clearTimeout(label.highlightTimeout);
+        label.highlightTimeout = setTimeout(() => label.style.color = 'inherit', 100);
+    }
+
+    function setVenueResult(label, result) {
+        setResult(label, result);
+        if (result.startsWith('UKC19TRACING:1:')) {
+            var token = result.replace('UKC19TRACING:1:','');
+            var decoded = jwt_decode(token);
+            setResult(venueIdResult, decoded.id);
+            setResult(venueNameResult, decoded.opn);
+            setResult(venuePostcodeResult, decoded.pc);
+        }
+    }
+
+    // ####### Web Cam Scanning #######
+
+    QrScanner.hasCamera().then(hasCamera => camHasCamera.textContent = hasCamera);
+
+    const scanner = new QrScanner(video, result => setVenueResult(camQrResult, result), error => {
+        camQrResult.textContent = error;
+        camQrResult.style.color = 'inherit';
+    });
+    scanner.start().then(() => {
+        scanner.hasFlash().then(hasFlash => {
+            camHasFlash.textContent = hasFlash;
+            if (hasFlash) {
+                flashToggle.style.display = 'inline-block';
+                flashToggle.addEventListener('click', () => {
+                    scanner.toggleFlash().then(() => flashState.textContent = scanner.isFlashOn() ? 'on' : 'off');
+                });
+            }
+        });
+    });
+
+    // for debugging
+    window.scanner = scanner;
+
+    document.getElementById('show-scan-region').addEventListener('change', (e) => {
+        const input = e.target;
+        const label = input.parentNode;
+        label.parentNode.insertBefore(scanner.$canvas, label.nextSibling);
+        scanner.$canvas.style.display = input.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('inversion-mode-select').addEventListener('change', event => {
+        scanner.setInversionMode(event.target.value);
+    });
+
+    document.getElementById('start-button').addEventListener('click', () => {
+        scanner.start();
+    });
+
+    document.getElementById('stop-button').addEventListener('click', () => {
+        scanner.stop();
+    });
+
+    // ####### File Scanning #######
+
+    fileSelector.addEventListener('change', event => {
+        const file = fileSelector.files[0];
+        if (!file) {
+            return;
+        }
+        QrScanner.scanImage(file)
+            .then(result => setVenueResult(fileQrResult, result))
+            .catch(e => setResult(fileQrResult, e || 'No QR code found.'));
+    });
+
+</script>
+</body>
+</html>
