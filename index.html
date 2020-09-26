@@ -2,10 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>QR Scanner Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NHS COVID-19 QR Scanner</title>
 </head>
 <body>
 <style>
+    @viewport {
+        width: device-width ;
+        zoom: 1.0 ;
+    }
     hr {
         margin-top: 32px;
     }
@@ -30,21 +35,9 @@
     <br>
     <video id="qr-video"></video>
     <br>
-    <label>
-        <input id="show-scan-region" type="checkbox">
-        Show scan region
-    </label>
 </div>
 <div>
     <button id="flash-toggle">📸 Flash: <span id="flash-state">off</span></button>
-</div>
-<div>
-    <select id="inversion-mode-select">
-        <option value="original">Scan original (dark QR code on bright background)</option>
-        <option value="invert">Scan with inverted colors (bright QR code on dark background)</option>
-        <option value="both">Scan both</option>
-    </select>
-    <br>
 </div>
 <b>Detected QR code: </b>
 <span id="cam-qr-result">None</span>
@@ -64,13 +57,13 @@
 <hr>
 <h1>Detected NHS COVID-19 venue:</h1>
 <b>ID: </b>
-<span id="venue-id-result">TBC</span>
+<span id="venue-id-result">None</span>
 <br>
 <b>Name: </b>
-<span id="venue-name-result">TBC</span>
+<span id="venue-name-result">None</span>
 <br>
 <b>Postcode: </b>
-<span id="venue-pc-result">TBC</span>
+<span id="venue-pc-result">None</span>
 
 <script src="jwt-decode.min.js"></script>
 <script type="module">
@@ -120,6 +113,7 @@
         camQrResult.textContent = error;
         camQrResult.style.color = 'inherit';
     });
+    scanner.setInversionMode('both');
     scanner.start().then(() => {
         scanner.hasFlash().then(hasFlash => {
             camHasFlash.textContent = hasFlash;
@@ -134,17 +128,6 @@
 
     // for debugging
     window.scanner = scanner;
-
-    document.getElementById('show-scan-region').addEventListener('change', (e) => {
-        const input = e.target;
-        const label = input.parentNode;
-        label.parentNode.insertBefore(scanner.$canvas, label.nextSibling);
-        scanner.$canvas.style.display = input.checked ? 'block' : 'none';
-    });
-
-    document.getElementById('inversion-mode-select').addEventListener('change', event => {
-        scanner.setInversionMode(event.target.value);
-    });
 
     document.getElementById('start-button').addEventListener('click', () => {
         scanner.start();
