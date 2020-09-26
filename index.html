@@ -11,6 +11,12 @@
         width: device-width ;
         zoom: 1.0 ;
     }
+    body {
+        color: white;
+        background-color: black;
+        border: 0;
+        margin: 0;
+    }
     hr {
         margin-top: 32px;
     }
@@ -22,13 +28,29 @@
         margin-bottom: 16px;
     }
     #qr-video {
-        background-color: black;
-        width: 90%;
+        background-color: dimgray;
+        border: 0;
+        margin: 0;
+        position:fixed;
+        z-index: -1;
+    }
+    @media (min-aspect-ratio: 16/9) {
+        #qr-video {
+            width:100%;
+            height: auto;
+        }
+    }
+    @media (max-aspect-ratio: 16/9) {
+        #qr-video { 
+            width:auto;
+            height: 100%;
+        }
     }
     #flash-toggle {
         display: none;
     }
 </style>
+<video id="qr-video"></video>
 <h1>Scan from WebCam:</h1>
 <div>
     <b>Device has camera: </b>
@@ -36,8 +58,6 @@
     <br>
     <b>Device has flash: </b>
     <span id="cam-has-flash"></span>
-    <br>
-    <video id="qr-video"></video>
     <br>
 </div>
 <div>
