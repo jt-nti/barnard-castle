@@ -36,121 +36,155 @@
     }
     @media (min-aspect-ratio: 16/9) {
         #qr-video {
-            width:100%;
-            height: auto;
+            width: 100%;
+            height: 100%;
         }
     }
     @media (max-aspect-ratio: 16/9) {
         #qr-video { 
-            width:auto;
+            width: 100%;
             height: 100%;
         }
     }
-    #flash-toggle {
-        display: none;
-    }
 </style>
+
 <video id="qr-video"></video>
-<h1>Scan from WebCam:</h1>
+
+<ul>
+<li><button id="start-button">Start scanning</button></li>
+<li><button id="stop-button">Stop scanning</button></li>
+<li><label for="file-selector">Scan file</label>
+<input type="file" id="file-selector"></li>
+<li><button id="clear-button">Clear history</button></li>
+<li>View <a href="https://github.com/jt-nti/barnard-castle">code on GitHub</a></li>
+</ul>
+
 <div>
-    <b>Device has camera: </b>
-    <span id="cam-has-camera"></span>
-    <br>
-    <b>Device has flash: </b>
-    <span id="cam-has-flash"></span>
-    <br>
+<table id="scan-results">
+</table>
 </div>
-<div>
-    <button id="flash-toggle">📸 Flash: <span id="flash-state">off</span></button>
-</div>
-<b>Detected QR code: </b>
-<span id="cam-qr-result">None</span>
-<br>
-<b>Last detected at: </b>
-<span id="cam-qr-result-timestamp"></span>
-<br>
-<button id="start-button">Start</button>
-<button id="stop-button">Stop</button>
-<hr>
 
-<h1>Scan from File:</h1>
-<input type="file" id="file-selector">
-<b>Detected QR code: </b>
-<span id="file-qr-result">None</span>
-
-<hr>
-<h1>Detected NHS COVID-19 venue:</h1>
-<b>ID: </b>
-<span id="venue-id-result">None</span>
-<br>
-<b>Name: </b>
-<span id="venue-name-result">None</span>
-<br>
-<b>Postcode: </b>
-<span id="venue-pc-result">None</span>
-
-<hr>
-View <a href="https://github.com/jt-nti/barnard-castle">code on GitHub</a>
-
-<script src="jwt-decode.min.js"></script>
+<script src="js/jwt-decode.min.js"></script>
 <script type="module">
-    import QrScanner from "./qr-scanner.min.js";
-    QrScanner.WORKER_PATH = './qr-scanner-worker.min.js';
+    import QrScanner from "./js/qr-scanner.min.js";
+    QrScanner.WORKER_PATH = './js/qr-scanner-worker.min.js';
+
+    const dbName = 'castledb';
+    const storeName = 'scans';
+    var db = null;
 
     const video = document.getElementById('qr-video');
-    const camHasCamera = document.getElementById('cam-has-camera');
-    const camHasFlash = document.getElementById('cam-has-flash');
-    const flashToggle = document.getElementById('flash-toggle');
-    const flashState = document.getElementById('flash-state');
-    const camQrResult = document.getElementById('cam-qr-result');
-    const camQrResultTimestamp = document.getElementById('cam-qr-result-timestamp');
     const fileSelector = document.getElementById('file-selector');
-    const fileQrResult = document.getElementById('file-qr-result');
-    const venueIdResult = document.getElementById('venue-id-result');
-    const venueNameResult = document.getElementById('venue-name-result');
-    const venuePostcodeResult = document.getElementById('venue-pc-result');
+    const scanResults = document.getElementById('scan-results');
 
-    // var test = 'UKC19TRACING:1:eyJhbGciOiJFUzI1NiIsImtpZCI6IllycWVMVHE4ei1vZkg1bnpsYVNHbllSZkI5YnU5eVBsV1lVXzJiNnFYT1EifQ.eyJpZCI6IjVZM1Y0Mk01Iiwib3BuIjoiQmFybmFyZCBDYXN0bGUiLCJ2dCI6IjAwMCIsInBjIjoiREwxMjhQUiJ9.gINSi7vSZ3hnYceo1BvKF2TLeQHcCpiYbBxn6MvljICKGEfamrT6E1anNpyJl7kAhV0QYO6pQEFsJvPUhE91Iw';
-    // setVenueResult(test);
+    function showScanResult(result) {
+        let newRow = scanResults.insertRow(0);
 
-    function setResult(label, result) {
-        label.textContent = result;
-        camQrResultTimestamp.textContent = new Date().toString();
-        label.style.color = 'teal';
-        clearTimeout(label.highlightTimeout);
-        label.highlightTimeout = setTimeout(() => label.style.color = 'inherit', 100);
+        let timeCell = newRow.insertCell();
+        let timeText = document.createTextNode(new Date(result.timestamp).toLocaleString() || 'Unknown');
+        timeCell.appendChild(timeText);
+
+        let locationCell = newRow.insertCell();
+        let locationText = document.createTextNode(`${result.opn || 'Unknown'}, ${result.pc || 'Unknown'}`);
+        locationCell.appendChild(locationText);
+
+        let idCell = newRow.insertCell();
+        let idText = document.createTextNode(result.id || 'Unknown');
+        idCell.appendChild(idText);
     }
 
-    function setVenueResult(label, result) {
-        setResult(label, result);
+    function handleResult(result) {
+        scanner.stop();
         if (result.startsWith('UKC19TRACING:1:')) {
             var token = result.replace('UKC19TRACING:1:','');
             var decoded = jwt_decode(token);
-            setResult(venueIdResult, decoded.id);
-            setResult(venueNameResult, decoded.opn);
-            setResult(venuePostcodeResult, decoded.pc);
+
+            // TODO: get timestamp from file modified date
+            decoded.timestamp = Date.now();
+
+            showScanResult(decoded);
+            saveScan(decoded);
         }
     }
 
+    // ####### Location check-in history #######
+
+    function initDb() {
+        return new Promise(function(resolve, reject) {
+            if (!('indexedDB' in window)) {
+                console.warn('IndexedDB not supported');
+                resolve(null);
+            } else {
+                var request = indexedDB.open(dbName, 1);
+
+                request.onsuccess = function(event) {
+                    console.log('IndexedDB opened');
+                    var db = event.target.result;
+                    resolve(db);
+                };
+
+                request.onerror = function(event) {
+                    console.error('IndexedDB not opened');
+                    resolve(null);
+                };
+
+                request.onupgradeneeded = function(event) {
+                    console.log('IndexedDB upgrading');
+                    var db = event.target.result;
+                    if(!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName, { keyPath: 'timestamp' });
+                    }
+
+                    var upgradeTxn = event.target.transaction;
+                    upgradeTxn.oncomplete = function(event) {    
+                        resolve(db);
+                    }
+                };
+            }
+        });
+    }
+
+    function loadScans() {
+        if (db) {
+            // Check the db
+            db.transaction(storeName).objectStore(storeName).openCursor().onsuccess = function(event) {
+                let cursor = event.target.result;
+                if (cursor) {
+                    showScanResult(cursor.value);
+                    cursor.continue();
+                }
+                else {
+                    // no more results
+                }
+            };
+        }
+    }
+
+    function saveScan(location) {
+        if (db) {
+            var scanObjectStore = db.transaction(storeName, 'readwrite').objectStore(storeName);
+            scanObjectStore.add(location);
+        }
+    }
+
+    initDb().then(function(response) {
+        console.log("Success!", response);
+        db = response;
+        loadScans();
+    });
+
     // ####### Web Cam Scanning #######
 
-    QrScanner.hasCamera().then(hasCamera => camHasCamera.textContent = hasCamera);
+    // QrScanner.hasCamera().then(hasCamera => camHasCamera.textContent = hasCamera);
 
-    const scanner = new QrScanner(video, result => setVenueResult(camQrResult, result), error => {
-        camQrResult.textContent = error;
-        camQrResult.style.color = 'inherit';
+    const scanner = new QrScanner(video, result => handleResult(result), error => {
+        // No QR code
     });
     scanner.setInversionMode('both');
     scanner.start().then(() => {
-        scanner.hasFlash().then(hasFlash => {
-            camHasFlash.textContent = hasFlash;
-            if (hasFlash) {
-                flashToggle.style.display = 'inline-block';
-                flashToggle.addEventListener('click', () => {
-                    scanner.toggleFlash().then(() => flashState.textContent = scanner.isFlashOn() ? 'on' : 'off');
-                });
-            }
-        });
+        setTimeout(() => {
+            scanner.stop();
+        }, 20 * 1000);
     });
 
     // for debugging
@@ -164,6 +198,15 @@ View <a href="https://github.com/jt-nti/barnard-castle">code on GitHub</a>
         scanner.stop();
     });
 
+    document.getElementById('clear-button').addEventListener('click', () => {
+        var scanObjectStore = db.transaction(storeName, 'readwrite').objectStore(storeName);
+        scanObjectStore.clear();
+
+        while (scanResults.firstChild) {
+            scanResults.removeChild(scanResults.lastChild);
+        }
+    });
+
     // ####### File Scanning #######
 
     fileSelector.addEventListener('change', event => {
@@ -172,8 +215,8 @@ View <a href="https://github.com/jt-nti/barnard-castle">code on GitHub</a>
             return;
         }
         QrScanner.scanImage(file)
-            .then(result => setVenueResult(fileQrResult, result))
-            .catch(e => setResult(fileQrResult, e || 'No QR code found.'));
+            .then(result => handleResult(result))
+            .catch(e => handleResult(e || 'No QR code found.'));
     });
 
 </script>
