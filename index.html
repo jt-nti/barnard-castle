@@ -87,18 +87,18 @@
     QrScanner.WORKER_PATH = './js/qr-scanner-worker.min.js';
 
     const dbName = 'castledb';
-    const storeName = 'scans';
+    const storeName = 'tokens';
     var db = null;
 
     const video = document.getElementById('qr-video');
     const fileSelector = document.getElementById('file-selector');
     const scanResults = document.getElementById('scan-results');
 
-    function showScanResult(result) {
+    function showScanResult(timestamp, result) {
         let newRow = scanResults.insertRow(0);
 
         let timeCell = newRow.insertCell();
-        let timeText = document.createTextNode(new Date(result.timestamp).toLocaleString() || 'Unknown');
+        let timeText = document.createTextNode(new Date(timestamp).toLocaleString() || 'Unknown');
         timeCell.appendChild(timeText);
 
         let locationCell = newRow.insertCell();
@@ -117,10 +117,8 @@
             var decoded = jwt_decode(token);
 
             // TODO: get timestamp from file modified date
-            decoded.timestamp = Date.now();
-
-            showScanResult(decoded);
-            saveScan(decoded);
+            showScanResult(Date.now(), decoded);
+            saveScan(Date.now(), token);
         }
     }
 
@@ -132,7 +130,7 @@
                 console.warn('IndexedDB not supported');
                 resolve(null);
             } else {
-                var request = indexedDB.open(dbName, 1);
+                var request = indexedDB.open(dbName, 2);
 
                 request.onsuccess = function(event) {
                     console.log('IndexedDB opened');
@@ -149,7 +147,7 @@
                     console.log('IndexedDB upgrading');
                     var db = event.target.result;
                     if(!db.objectStoreNames.contains(storeName)) {
-                        db.createObjectStore(storeName, { keyPath: 'timestamp' });
+                        db.createObjectStore(storeName);
                     }
 
                     var upgradeTxn = event.target.transaction;
@@ -167,7 +165,8 @@
             db.transaction(storeName).objectStore(storeName).openCursor().onsuccess = function(event) {
                 let cursor = event.target.result;
                 if (cursor) {
-                    showScanResult(cursor.value);
+                    var decoded = jwt_decode(cursor.value);
+                    showScanResult(cursor.key, decoded);
                     cursor.continue();
                 }
                 else {
@@ -177,10 +176,10 @@
         }
     }
 
-    function saveScan(location) {
+    function saveScan(timestamp, token) {
         if (db) {
             var scanObjectStore = db.transaction(storeName, 'readwrite').objectStore(storeName);
-            scanObjectStore.add(location);
+            scanObjectStore.add(token, timestamp);
         }
     }
 
