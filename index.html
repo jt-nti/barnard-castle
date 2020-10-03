@@ -1,8 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+
     <title>NHS COVID-19 QR Scanner</title>
     <link rel="apple-touch-icon" sizes="57x57" href="/images/apple-icon-57x57.png">
     <link rel="apple-touch-icon" sizes="60x60" href="/images/apple-icon-60x60.png">
@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" sizes="144x144" href="/images/apple-icon-144x144.png">
     <link rel="apple-touch-icon" sizes="152x152" href="/images/apple-icon-152x152.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-icon-180x180.png">
-    <link rel="icon" type="image/png" sizes="192x192"  href="/images/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/images/android-icon-192x192.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="96x96" href="/images/favicon-96x96.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
@@ -21,220 +21,112 @@
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/images/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
+
+    <script src="js/jsQR.js"></script>
+    <script src="js/load-image.js"></script>
+    <script src="js/jwt-decode.min.js"></script>
+    <script src="js/castle.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/castle.css?v=1" />
 </head>
+
 <body>
-<style>
-    @viewport {
-        width: device-width ;
-        zoom: 1.0 ;
-    }
-    body {
-        color: white;
-        background-color: black;
-        border: 0;
-        margin: 0;
-    }
-    hr {
-        margin-top: 32px;
-    }
-    input[type="file"] {
-        display: block;
-        margin-bottom: 16px;
-    }
-    div {
-        margin-bottom: 16px;
-    }
-    #qr-video {
-        background-color: dimgray;
-        border: 0;
-        margin: 0;
-        position:fixed;
-        z-index: -1;
-    }
-    @media (min-aspect-ratio: 16/9) {
-        #qr-video {
-            width: 100%;
-            height: 100%;
-        }
-    }
-    @media (max-aspect-ratio: 16/9) {
-        #qr-video { 
-            width: 100%;
-            height: 100%;
-        }
-    }
-</style>
+    <video autoplay playsinline id="video"></video>
+    <div id="output">
+        <div>
+            <label for="qr-text">QR Code Contents: </label>
+            <input type="text" name="qr-text" id="qr-text" required>
+        </div>
+        <div>
+            <button id="add-button">Add code</button>
+            <button id="clear-button">Clear history</button>
+        </div>
 
-<video id="qr-video"></video>
+        <table id="scan-results">
+        </table>
 
-<ul>
-<li><button id="start-button">Start scanning</button></li>
-<li><button id="stop-button">Stop scanning</button></li>
-<li><label for="file-selector">Scan file</label>
-<input type="file" id="file-selector"></li>
-<li><button id="clear-button">Clear history</button></li>
-<li>View <a href="https://github.com/jt-nti/barnard-castle">code on GitHub</a></li>
-</ul>
+    </div>
 
-<div>
-<table id="scan-results">
-</table>
-</div>
+    <script>
+        const video = document.getElementById('video');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const outputContainer = document.getElementById('output');
+        const outputMessage = document.getElementById('outputMessage');
+        const outputData = document.getElementById('outputData');
+        const scanResults = document.getElementById('scan-results');
 
-<script src="js/jwt-decode.min.js"></script>
-<script type="module">
-    import QrScanner from "./js/qr-scanner.min.js";
-    QrScanner.WORKER_PATH = './js/qr-scanner-worker.min.js';
-
-    const dbName = 'castledb';
-    const storeName = 'tokens';
-    var db = null;
-
-    const video = document.getElementById('qr-video');
-    const fileSelector = document.getElementById('file-selector');
-    const scanResults = document.getElementById('scan-results');
-
-    function showScanResult(timestamp, result) {
-        let newRow = scanResults.insertRow(0);
-
-        let timeCell = newRow.insertCell();
-        let timeText = document.createTextNode(new Date(timestamp).toLocaleString() || 'Unknown');
-        timeCell.appendChild(timeText);
-
-        let locationCell = newRow.insertCell();
-        let locationText = document.createTextNode(`${result.opn || 'Unknown'}, ${result.pc || 'Unknown'}`);
-        locationCell.appendChild(locationText);
-
-        let idCell = newRow.insertCell();
-        let idText = document.createTextNode(result.id || 'Unknown');
-        idCell.appendChild(idText);
-    }
-
-    function handleResult(result) {
-        scanner.stop();
-        if (result.startsWith('UKC19TRACING:1:')) {
-            var token = result.replace('UKC19TRACING:1:','');
-            var decoded = jwt_decode(token);
-
-            // TODO: get timestamp from file modified date
-            showScanResult(Date.now(), decoded);
-            saveScan(Date.now(), token);
-        }
-    }
-
-    // ####### Location check-in history #######
-
-    function initDb() {
-        return new Promise(function(resolve, reject) {
-            if (!('indexedDB' in window)) {
-                console.warn('IndexedDB not supported');
-                resolve(null);
-            } else {
-                var request = indexedDB.open(dbName, 2);
-
-                request.onsuccess = function(event) {
-                    console.log('IndexedDB opened');
-                    var db = event.target.result;
-                    resolve(db);
-                };
-
-                request.onerror = function(event) {
-                    console.error('IndexedDB not opened');
-                    resolve(null);
-                };
-
-                request.onupgradeneeded = function(event) {
-                    console.log('IndexedDB upgrading');
-                    var db = event.target.result;
-                    if(!db.objectStoreNames.contains(storeName)) {
-                        db.createObjectStore(storeName);
-                    }
-
-                    var upgradeTxn = event.target.transaction;
-                    upgradeTxn.oncomplete = function(event) {    
-                        resolve(db);
-                    }
-                };
-            }
+        initDb().then(function (response) {
+            db = response;
+            loadScans(scanResults);
         });
-    }
 
-    function loadScans() {
-        if (db) {
-            // Check the db
-            db.transaction(storeName).objectStore(storeName).openCursor().onsuccess = function(event) {
-                let cursor = event.target.result;
-                if (cursor) {
-                    var decoded = jwt_decode(cursor.value);
-                    showScanResult(cursor.key, decoded);
-                    cursor.continue();
+        var tickDuration = 200;
+
+        // Use facingMode: environment to attemt to get the front camera on phones
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+            video.srcObject = stream;
+            video.play();
+            setTimeout(function () { tick(); }, tickDuration);
+        });
+
+        function tick() {
+            try {
+                var canvasElement = document.createElement("canvas");
+                var canvas = canvasElement.getContext("2d");
+                canvasElement.height = video.videoHeight;
+                canvasElement.width = video.videoWidth;
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                if (code) {
+                    // barcode was found!
+                    document.getElementById('qr-text').value = code.data;
+                    handleCode(scanResults, code.data);
                 }
-                else {
-                    // no more results
-                }
-            };
+            }
+            catch (t) {
+                console.log("PROBLEM: " + t);
+            }
+            setTimeout(function () { tick(); }, tickDuration);
         }
-    }
 
-    function saveScan(timestamp, token) {
-        if (db) {
-            var scanObjectStore = db.transaction(storeName, 'readwrite').objectStore(storeName);
-            scanObjectStore.add(token, timestamp);
-        }
-    }
+        document.getElementById('add-button').addEventListener('click', () => {
+            var code = document.getElementById('qr-text').value;
+            handleCode(scanResults, code);
+        });
 
-    initDb().then(function(response) {
-        console.log("Success!", response);
-        db = response;
-        loadScans();
-    });
+        document.getElementById('clear-button').addEventListener('click', () => {
+            clearScans();
+        });
 
-    // ####### Web Cam Scanning #######
+    // document.getElementById('file-input').onchange = function () {
+    //     loadImage(
+    //         this.files[0],
+    //         function (img, data) {
+    //             // document.body.appendChild(img)
+    //             var canvasElement = document.createElement("canvas");            
+    //             var canvas = canvasElement.getContext("2d");
+    //             canvasElement.height = data.originalHeight;
+    //             canvasElement.width = data.originalWidth;
+    //             canvas.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
+    //             var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+    //             var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+    //             if (code) 
+    //             {
+    //                 // barcode was found!
+    //                 decodeData(code.data);
 
-    // QrScanner.hasCamera().then(hasCamera => camHasCamera.textContent = hasCamera);
-
-    const scanner = new QrScanner(video, result => handleResult(result), error => {
-        // No QR code
-    });
-    scanner.setInversionMode('both');
-    scanner.start().then(() => {
-        setTimeout(() => {
-            scanner.stop();
-        }, 20 * 1000);
-    });
-
-    // for debugging
-    window.scanner = scanner;
-
-    document.getElementById('start-button').addEventListener('click', () => {
-        scanner.start();
-    });
-
-    document.getElementById('stop-button').addEventListener('click', () => {
-        scanner.stop();
-    });
-
-    document.getElementById('clear-button').addEventListener('click', () => {
-        var scanObjectStore = db.transaction(storeName, 'readwrite').objectStore(storeName);
-        scanObjectStore.clear();
-
-        while (scanResults.firstChild) {
-            scanResults.removeChild(scanResults.lastChild);
-        }
-    });
-
-    // ####### File Scanning #######
-
-    fileSelector.addEventListener('change', event => {
-        const file = fileSelector.files[0];
-        if (!file) {
-            return;
-        }
-        QrScanner.scanImage(file)
-            .then(result => handleResult(result))
-            .catch(e => handleResult(e || 'No QR code found.'));
-    });
-
-</script>
+    //                 outputMessage.hidden = true;
+    //                 outputData.parentElement.hidden = false;
+    //                 outputData.innerText = data;
+    //             } else {
+    //                 alert("No code detected");
+    //             }
+    //         },
+    //         {
+    //             meta: true
+    //         } // Options
+    //     )}
+    </script>
 </body>
+
 </html>
