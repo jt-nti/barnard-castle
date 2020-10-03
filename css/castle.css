@@ -1,0 +1,67 @@
+body {
+    font-family: 'Ropa Sans', sans-serif;
+    color: #333;
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+}
+
+#githubLink {
+    position: absolute;
+    right: 0;
+    top: 12px;
+    color: #2D99FF;
+}
+
+h1 {
+    margin: 10px 0;
+    font-size: 40px;
+}
+
+#loadingMessage {
+    text-align: center;
+    padding: 40px;
+    background-color: #eee;
+}
+
+#video {
+    width: 100%;
+}
+
+#output {
+    margin-top: 20px;
+    background: #eee;
+    padding: 10px;
+    padding-bottom: 0;
+}
+
+#output div {
+    padding-bottom: 10px;
+    word-wrap: break-word;
+}
+
+#noQRFound {
+    text-align: center;
+}
+
+/* input[type="file"] {
+    display: none;
+}
+
+#qr-file-upload {
+    border: 1px solid #ccc;
+    display: inline-block;
+    padding: 2em;
+    cursor: pointer;
+} */
+
+input[type="button"] {
+    display: none;
+}
+
+#clear-button, #add-button {
+    border: 2px solid #ccc;
+    display: inline-block;
+    padding: 1em;
+    cursor: pointer;
+}
