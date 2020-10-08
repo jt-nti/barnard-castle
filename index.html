@@ -1,7 +1,9 @@
+<!DOCTYPE html>
 <html>
 
 <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>NHS COVID-19 QR Scanner</title>
     <link rel="apple-touch-icon" sizes="57x57" href="/images/apple-icon-57x57.png">
@@ -27,24 +29,49 @@
     <script src="js/jwt-decode.min.js"></script>
     <script src="js/castle.js"></script>
     <link rel="stylesheet" type="text/css" href="css/castle.css?v=1" />
+    <link rel="stylesheet" type="text/css" href="css/bulma.min.css?v=1" />
 </head>
 
 <body>
-    <video autoplay playsinline id="video"></video>
-    <div id="output">
-        <div>
-            <label for="qr-text">QR Code Contents: </label>
-            <input type="text" name="qr-text" id="qr-text" required>
+    <section class="block container">
+        <video autoplay playsinline id="video"></video>
+    </section>
+    <main class="block container" id="output">
+        <div class="box">
+            <div class="content">
+                <div class="field">
+                    <label class="label" for="qr-text">QR Code Contents</label>
+                    <div class="control">
+                        <textarea class="textarea is-primary has-fixed-area" id="qr-text"
+                            placeholder="UKC19TRACING:1:"></textarea>
+                    </div>
+                </div>
+                <div class="field is-grouped is-grouped-right">
+                    <p class="control">
+                        <button class="button is-primary" id="add-button">Add code</button>
+                    </p>
+                </div>
+            </div>
+            <div class="content">
+                <table class="table" id="scan-results">
+                </table>
+                <div class="field is-grouped is-grouped-right">
+                    <p class="control">
+                        <button class="button is-danger" id="clear-button">Clear history</button>
+                    </p>
+                </div>
+            </div>
         </div>
-        <div>
-            <button id="add-button">Add code</button>
-            <button id="clear-button">Clear history</button>
+    </main>
+
+    <footer class="block footer">
+        <div class="content has-text-centered">
+            <p>
+                <strong>Barnard Castle</strong> <a href="https://github.com/jt-nti/barnard-castle">source code on
+                    GitHub</a>.
+            </p>
         </div>
-
-        <table id="scan-results">
-        </table>
-
-    </div>
+    </footer>
 
     <script>
         const video = document.getElementById('video');
