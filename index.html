@@ -46,14 +46,18 @@
                             placeholder="UKC19TRACING:1:"></textarea>
                     </div>
                 </div>
+                <div class="block">
+                    <table class="table" id="qr-preview">
+                    </table>
+                </div>
                 <div class="field is-grouped is-grouped-right">
                     <p class="control">
-                        <button class="button is-primary" id="add-button">Add code</button>
+                        <button class="button is-primary" id="add-button">Check in</button>
                     </p>
                 </div>
             </div>
             <div class="content">
-                <table class="table" id="scan-results">
+                <table class="table" id="qr-history">
                 </table>
                 <div class="field is-grouped is-grouped-right">
                     <p class="control">
@@ -79,11 +83,12 @@
         const outputContainer = document.getElementById('output');
         const outputMessage = document.getElementById('outputMessage');
         const outputData = document.getElementById('outputData');
-        const scanResults = document.getElementById('scan-results');
+        const qrPreview = document.getElementById('qr-preview');
+        const qrHistory = document.getElementById('qr-history');
 
         initDb().then(function (response) {
             db = response;
-            loadScans(scanResults);
+            loadScans(qrHistory);
         });
 
         var tickDuration = 200;
@@ -107,7 +112,7 @@
                 if (code) {
                     // barcode was found!
                     document.getElementById('qr-text').value = code.data;
-                    handleCode(scanResults, code.data);
+                    previewCode(qrPreview, code.data);
                 }
             }
             catch (t) {
@@ -118,11 +123,16 @@
 
         document.getElementById('add-button').addEventListener('click', () => {
             var code = document.getElementById('qr-text').value;
-            handleCode(scanResults, code);
+            checkIn(qrHistory, code);
         });
 
         document.getElementById('clear-button').addEventListener('click', () => {
-            clearScans();
+            clearScans(qrHistory);
+        });
+
+        document.getElementById('qr-text').addEventListener('input', event => {
+            var code = document.getElementById('qr-text').value;
+            previewCode(qrPreview, code);
         });
 
     // document.getElementById('file-input').onchange = function () {
