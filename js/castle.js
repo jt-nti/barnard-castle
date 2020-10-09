@@ -18,7 +18,11 @@ function previewCode(table, code) {
             table.removeChild(table.lastChild);
         }
         addScanResultRow(table, Date.now(), decoded);
+
+        return true;
     }
+
+    return false;
 }
 
 function addScanResultRow(table, timestamp, result) {
