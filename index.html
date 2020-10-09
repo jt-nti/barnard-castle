@@ -28,15 +28,15 @@
     <script src="js/load-image.js"></script>
     <script src="js/jwt-decode.min.js"></script>
     <script src="js/castle.js"></script>
-    <link rel="stylesheet" type="text/css" href="css/castle.css?v=1" />
     <link rel="stylesheet" type="text/css" href="css/bulma.min.css?v=1" />
+    <link rel="stylesheet" type="text/css" href="css/castle.css?v=2" />
 </head>
 
 <body>
-    <section class="block container">
+    <header class="container my-2 has-text-centered">
         <video autoplay playsinline id="video"></video>
-    </section>
-    <main class="block container" id="output">
+    </header>
+    <main class="container" id="output">
         <div class="box">
             <div class="content">
                 <div class="field">
@@ -50,9 +50,12 @@
                     <table class="table" id="qr-preview">
                     </table>
                 </div>
-                <div class="field is-grouped is-grouped-right">
+                <div class="field is-grouped is-grouped-left">
                     <p class="control">
-                        <button class="button is-primary" id="add-button">Check in</button>
+                        <button class="button is-primary" id="start-button">Scan QR</button>
+                    </p>
+                    <p class="control">
+                        <button class="button" id="add-button">Check in</button>
                     </p>
                 </div>
             </div>
@@ -68,7 +71,7 @@
         </div>
     </main>
 
-    <footer class="block footer">
+    <footer class="footer">
         <div class="content has-text-centered">
             <p>
                 <strong>Barnard Castle</strong> <a href="https://github.com/jt-nti/barnard-castle">source code on
@@ -92,13 +95,8 @@
         });
 
         var tickDuration = 200;
-
-        // Use facingMode: environment to attemt to get the front camera on phones
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
-            video.srcObject = stream;
-            video.play();
-            setTimeout(function () { tick(); }, tickDuration);
-        });
+        var tickTimeoutId;
+        var scanTimeoutId;
 
         function tick() {
             try {
@@ -112,14 +110,47 @@
                 if (code) {
                     // barcode was found!
                     document.getElementById('qr-text').value = code.data;
-                    previewCode(qrPreview, code.data);
+                    if (previewCode(qrPreview, code.data)) {
+                        stop();
+                        return;
+                    }
                 }
             }
             catch (t) {
                 console.log("PROBLEM: " + t);
             }
-            setTimeout(function () { tick(); }, tickDuration);
+            tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
         }
+
+        function stop() {
+            clearTimeout(tickTimeoutId);
+            clearTimeout(scanTimeoutId);
+            tickTimeoutId = null;
+            scanTimeoutId = null;
+
+            const stream = video.srcObject;
+            const tracks = stream.getTracks();
+
+            tracks.forEach(function (track) {
+                track.stop();
+            });
+
+            video.srcObject = null;
+
+            document.getElementById('start-button').classList.remove('is-loading');
+        }
+
+        document.getElementById('start-button').addEventListener('click', () => {
+            document.getElementById('start-button').classList.add('is-loading');
+
+            // Use facingMode: environment to attemt to get the front camera on phones
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+                video.srcObject = stream;
+                video.play();
+                tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
+                scanTimeoutId = setTimeout(function () { stop(); }, 99 * tickDuration);
+            });
+        });
 
         document.getElementById('add-button').addEventListener('click', () => {
             var code = document.getElementById('qr-text').value;

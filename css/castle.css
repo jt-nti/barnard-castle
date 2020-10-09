@@ -1,5 +1,4 @@
 #video {
-    width: 100%;
-    margin: 0 auto;
-    text-align: center;
+    background: #222;
+    width: 90%;
 }
