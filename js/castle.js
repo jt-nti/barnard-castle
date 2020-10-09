@@ -1,4 +1,4 @@
-function handleCode(table, code) {
+function checkIn(table, code) {
     if (code.startsWith('UKC19TRACING:1:')) {
         var token = code.replace('UKC19TRACING:1:', '');
         var decoded = jwt_decode(token);
@@ -6,6 +6,18 @@ function handleCode(table, code) {
         // TODO: get timestamp from file modified date
         addScanResultRow(table, Date.now(), decoded);
         saveScan(Date.now(), token);
+    }
+}
+
+function previewCode(table, code) {
+    if (code.startsWith('UKC19TRACING:1:')) {
+        var token = code.replace('UKC19TRACING:1:', '');
+        var decoded = jwt_decode(token);
+
+        while (table.firstChild) {
+            table.removeChild(table.lastChild);
+        }
+        addScanResultRow(table, Date.now(), decoded);
     }
 }
 
@@ -90,11 +102,11 @@ function saveScan(timestamp, token) {
     }
 }
 
-function clearScans() {
+function clearScans(table) {
     var scanObjectStore = db.transaction(storeName, 'readwrite').objectStore(storeName);
     scanObjectStore.clear();
 
-    while (scanResults.firstChild) {
-        scanResults.removeChild(scanResults.lastChild);
+    while (table.firstChild) {
+        table.removeChild(table.lastChild);
     }
 }
