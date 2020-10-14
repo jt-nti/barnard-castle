@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>NHS COVID-19 QR Scanner</title>
+    <title>Barnard Castle</title>
     <link rel="apple-touch-icon" sizes="57x57" href="/images/apple-icon-57x57.png">
     <link rel="apple-touch-icon" sizes="60x60" href="/images/apple-icon-60x60.png">
     <link rel="apple-touch-icon" sizes="72x72" href="/images/apple-icon-72x72.png">
@@ -32,10 +32,46 @@
     <link rel="stylesheet" type="text/css" href="css/castle.css?v=2" />
 </head>
 
-<body>
-    <header class="container my-2 has-text-centered">
-        <video autoplay playsinline id="video"></video>
-    </header>
+<body class="is-clipped">
+    <section id="qr-dialog" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <p class="has-text-centered">
+                <video autoplay playsinline id="video"></video>
+            </p>
+        </div>
+        <button class="modal-close is-large" aria-label="close" id="stop-button"></button>
+    </section>
+    <section class="hero">
+        <div class="hero-body">
+            <div class="container">
+                <h1 class="title">Barnard Castle</h1>
+                <h2 class="subtitle">NHS COVID-19 QR Scanner</h2>
+
+                <div class="content">
+                    <p>Simple app to scan NHS COVID-19 QR codes if you cannot use the official app.</p>
+                    <p>You can keep track of where you've been by saving check-ins in your browser, or just find out
+                        what's in those huge QR codes.</p>
+                </div>
+                <div class="buttons has-addons">
+                    <button class="button" id="start-button">Scan QR</button>
+                    <button class="button" id="start-with-torch-button">Scan with torch</button>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- <section class="section">
+        <div class="container">
+            <div class="content">
+                <p>Simple app to scan NHS COVID-19 QR codes if you cannot, or do not want to, use the official app.</p>
+                <p>You can keep track of where you've been by saving check-ins in your browser, or just find out what's in those huge QR codes.</p>
+            </div>
+            <div class="buttons has-addons">
+                <button class="button">Scan QR</button>
+                <button class="button">Scan with light</button>
+            </div>
+        </div>
+    </section> -->
     <main class="container" id="output">
         <div class="box">
             <div class="content">
@@ -51,9 +87,9 @@
                     </table>
                 </div>
                 <div class="field is-grouped is-grouped-left">
-                    <p class="control">
+                    <!-- <p class="control">
                         <button class="button is-primary" id="start-button">Scan QR</button>
-                    </p>
+                    </p> -->
                     <p class="control">
                         <button class="button" id="add-button">Check in</button>
                     </p>
@@ -74,7 +110,7 @@
     <footer class="footer">
         <div class="content has-text-centered">
             <p>
-                <strong>Barnard Castle</strong> <a href="https://github.com/jt-nti/barnard-castle">source code on
+                <a href="https://github.com/jt-nti/barnard-castle">Source code on
                     GitHub</a>.
             </p>
         </div>
@@ -122,6 +158,31 @@
             tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
         }
 
+        function start(useTorch) {
+            document.getElementById('qr-dialog').classList.add('is-active');
+            // document.getElementById('start-button').classList.add('is-loading');
+
+            // Use facingMode: environment to attemt to get the front camera on phones
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+                video.srcObject = stream;
+                video.play();
+
+                if (useTorch) {
+                    const stream = video.srcObject;
+                    const tracks = stream.getTracks();
+
+                    // TODO handle "Unsupported constraint(s)" error
+                    tracks.forEach(function (track) {
+                        track.applyConstraints({
+                            advanced: [{ torch: true }]
+                        });
+                    });
+                }
+                tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
+                scanTimeoutId = setTimeout(function () { stop(); }, 99 * tickDuration);
+            });
+        }
+
         function stop() {
             clearTimeout(tickTimeoutId);
             clearTimeout(scanTimeoutId);
@@ -137,19 +198,30 @@
 
             video.srcObject = null;
 
-            document.getElementById('start-button').classList.remove('is-loading');
+            document.getElementById('qr-dialog').classList.remove('is-active');
+            // document.getElementById('start-button').classList.remove('is-loading');
         }
 
         document.getElementById('start-button').addEventListener('click', () => {
-            document.getElementById('start-button').classList.add('is-loading');
+            start(false);
+            // document.getElementById('qr-dialog').classList.add('is-active');
+            // document.getElementById('start-button').classList.add('is-loading');
 
-            // Use facingMode: environment to attemt to get the front camera on phones
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
-                video.srcObject = stream;
-                video.play();
-                tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
-                scanTimeoutId = setTimeout(function () { stop(); }, 99 * tickDuration);
-            });
+            // // Use facingMode: environment to attemt to get the front camera on phones
+            // navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+            //     video.srcObject = stream;
+            //     video.play();
+            //     tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
+            //     scanTimeoutId = setTimeout(function () { stop(); }, 99 * tickDuration);
+            // });
+        });
+
+        document.getElementById('start-with-torch-button').addEventListener('click', () => {
+            start(true);
+        });
+
+        document.getElementById('stop-button').addEventListener('click', () => {
+            stop();
         });
 
         document.getElementById('add-button').addEventListener('click', () => {
