@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>NHS COVID-19 QR Scanner</title>
+    <title>Barnard Castle</title>
     <link rel="apple-touch-icon" sizes="57x57" href="/images/apple-icon-57x57.png">
     <link rel="apple-touch-icon" sizes="60x60" href="/images/apple-icon-60x60.png">
     <link rel="apple-touch-icon" sizes="72x72" href="/images/apple-icon-72x72.png">
@@ -24,48 +24,83 @@
     <meta name="msapplication-TileImage" content="/images/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
-    <script src="js/jsQR.js"></script>
-    <script src="js/load-image.js"></script>
-    <script src="js/jwt-decode.min.js"></script>
-    <script src="js/castle.js"></script>
     <link rel="stylesheet" type="text/css" href="css/bulma.min.css?v=1" />
     <link rel="stylesheet" type="text/css" href="css/castle.css?v=2" />
 </head>
 
 <body>
-    <header class="container my-2 has-text-centered">
-        <video autoplay playsinline id="video"></video>
-    </header>
-    <main class="container" id="output">
-        <div class="box">
-            <div class="content">
-                <div class="field">
-                    <label class="label" for="qr-text">QR Code Contents</label>
-                    <div class="control">
-                        <textarea class="textarea is-primary has-fixed-area" id="qr-text"
-                            placeholder="UKC19TRACING:1:"></textarea>
-                    </div>
+    <section id="scan-dialog" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <p class="has-text-centered">
+                <video autoplay playsinline id="video"></video>
+            </p>
+        </div>
+        <button class="modal-close is-large" aria-label="close" id="stop-button"></button>
+    </section>
+
+    <header class="hero">
+        <div class="hero-body">
+            <div class="container">
+                <h1 class="title">Barnard Castle</h1>
+                <h2 class="subtitle">NHS COVID-19 QR Scanner</h2>
+
+                <div class="content">
+                    <p>Simple app to scan NHS COVID-19 QR codes if you cannot use the official app.</p>
+                    <p>You can keep track of where you've been by saving check-ins in your browser, or just find out
+                        what's in those huge QR codes!</p>
                 </div>
-                <div class="block">
-                    <table class="table" id="qr-preview">
-                    </table>
-                </div>
-                <div class="field is-grouped is-grouped-left">
-                    <p class="control">
-                        <button class="button is-primary" id="start-button">Scan QR</button>
-                    </p>
-                    <p class="control">
-                        <button class="button" id="add-button">Check in</button>
-                    </p>
+                <div class="buttons has-addons">
+                    <button class="button is-primary" id="start-button">Scan QR</button>
+                    <button class="button" id="qr-paste-button">Paste QR Content</button>
                 </div>
             </div>
-            <div class="content">
-                <table class="table" id="qr-history">
-                </table>
-                <div class="field is-grouped is-grouped-right">
-                    <p class="control">
-                        <button class="button is-danger" id="clear-button">Clear history</button>
-                    </p>
+        </div>
+    </header>
+
+    <main class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column">
+                    <div id="info-message" class="message is-info is-hidden">
+                        <div class="message-body">
+                            No NHS COVID-19 QR code detected
+                        </div>
+                    </div>
+                    <div class="box">
+                        <div class="field is-hidden">
+                            <label class="label" for="qr-content">QR Code Contents</label>
+                            <div class="control">
+                                <textarea class="textarea has-fixed-area" id="qr-content" placeholder="UKC19TRACING:1:"
+                                    readonly></textarea>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label" for="venue-text">Venue Details</label>
+                            <div class="control">
+                                <textarea class="textarea is-info has-fixed-area" id="venue-text"
+                                    readonly></textarea>
+                            </div>
+                        </div>
+                        <div class="field is-grouped is-grouped-left">
+                            <p class="control">
+                                <button class="button" id="add-button" disabled>Check in</button>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="box">
+                        <div class="content">
+                            <table class="table" id="qr-history">
+                            </table>
+                            <div class="field is-grouped is-grouped-right">
+                                <p class="control">
+                                    <button class="button is-danger" id="clear-button">Clear history</button>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -74,20 +109,27 @@
     <footer class="footer">
         <div class="content has-text-centered">
             <p>
-                <strong>Barnard Castle</strong> <a href="https://github.com/jt-nti/barnard-castle">source code on
+                <a href="https://github.com/jt-nti/barnard-castle">Source code on
                     GitHub</a>.
             </p>
         </div>
     </footer>
 
+    <script src="js/jsQR.js"></script>
+    <script src="js/load-image.js"></script>
+    <script src="js/jwt-decode.min.js"></script>
+    <script src="js/castle.js"></script>
     <script>
+        const scanDialog = document.getElementById('scan-dialog');
+        const startButton = document.getElementById('start-button');
+        const pasteButton = document.getElementById('qr-paste-button');
         const video = document.getElementById('video');
-        const loadingMessage = document.getElementById('loadingMessage');
-        const outputContainer = document.getElementById('output');
-        const outputMessage = document.getElementById('outputMessage');
-        const outputData = document.getElementById('outputData');
-        const qrPreview = document.getElementById('qr-preview');
+        const infoMessage = document.getElementById('info-message');
+        const qrContent = document.getElementById('qr-content');
+        const venueText = document.getElementById('venue-text');
+        const addButton = document.getElementById('add-button');
         const qrHistory = document.getElementById('qr-history');
+        const clearButton = document.getElementById('clear-button');
 
         initDb().then(function (response) {
             db = response;
@@ -109,8 +151,8 @@
                 var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
                 if (code) {
                     // barcode was found!
-                    document.getElementById('qr-text').value = code.data;
-                    if (previewCode(qrPreview, code.data)) {
+                    qrContent.value = code.data;
+                    if (previewCode(infoMessage, venueText, addButton, qrContent)) {
                         stop();
                         return;
                     }
@@ -120,6 +162,35 @@
                 console.log("PROBLEM: " + t);
             }
             tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
+        }
+
+        function start(useTorch) {
+            document.documentElement.classList.add('is-clipped');
+            scanDialog.classList.add('is-active');
+
+            // Use facingMode: environment to attemt to get the front camera on phones
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+                video.srcObject = stream;
+                video.play();
+
+                if (useTorch) {
+                    const stream = video.srcObject;
+                    const tracks = stream.getTracks();
+
+                    // TODO handle "Unsupported constraint(s)" error
+                    tracks.forEach(function (track) {
+                        track.applyConstraints({
+                            advanced: [{ torch: true }]
+                        });
+                    });
+                }
+                tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
+                scanTimeoutId = setTimeout(function () {
+                    qrContent.value = '';
+                    previewCode(infoMessage, venueText, addButton, qrContent);
+                    stop();
+                }, 99 * tickDuration);
+            });
         }
 
         function stop() {
@@ -137,33 +208,37 @@
 
             video.srcObject = null;
 
-            document.getElementById('start-button').classList.remove('is-loading');
+            document.documentElement.classList.remove('is-clipped');
+            scanDialog.classList.remove('is-active');
         }
 
-        document.getElementById('start-button').addEventListener('click', () => {
-            document.getElementById('start-button').classList.add('is-loading');
+        startButton.addEventListener('click', () => {
+            start(false);
+        });
 
-            // Use facingMode: environment to attemt to get the front camera on phones
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
-                video.srcObject = stream;
-                video.play();
-                tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
-                scanTimeoutId = setTimeout(function () { stop(); }, 99 * tickDuration);
+        // document.getElementById('start-with-torch-button').addEventListener('click', () => {
+        //     start(true);
+        // });
+
+        pasteButton.addEventListener('click', () => {
+            navigator.clipboard.readText().then(text => {
+                qrContent.value = text;
+                previewCode(infoMessage, venueText, addButton, qrContent);
             });
         });
 
+        document.getElementById('stop-button').addEventListener('click', () => {
+            qrContent.value = '';
+            previewCode(infoMessage, venueText, addButton, qrContent);
+            stop();
+        });
+
         document.getElementById('add-button').addEventListener('click', () => {
-            var code = document.getElementById('qr-text').value;
-            checkIn(qrHistory, code);
+            checkIn(qrHistory, qrContent.value);
         });
 
         document.getElementById('clear-button').addEventListener('click', () => {
             clearScans(qrHistory);
-        });
-
-        document.getElementById('qr-text').addEventListener('input', event => {
-            var code = document.getElementById('qr-text').value;
-            previewCode(qrPreview, code);
         });
 
     // document.getElementById('file-input').onchange = function () {
