@@ -9,21 +9,43 @@ function checkIn(table, code) {
     }
 }
 
-function previewCode(table, code) {
+function previewCode(infoMessage, venueText, addButton, qrContent) {
+    var code = qrContent.value;
+    console.log(code);
     if (code.startsWith('UKC19TRACING:1:')) {
         var token = code.replace('UKC19TRACING:1:', '');
         var decoded = jwt_decode(token);
+        console.log(decoded);
 
-        while (table.firstChild) {
-            table.removeChild(table.lastChild);
-        }
-        addScanResultRow(table, Date.now(), decoded);
+        var preview = `${decoded.opn || 'Unknown'}\n${decoded.pc || 'Unknown'}\n${decoded.id || 'Unknown'}`
 
+        infoMessage.classList.add('is-hidden');
+        venueText.value = preview;
+        addButton.disabled = false;
         return true;
     }
 
+    infoMessage.classList.remove('is-hidden');
+    venueText.value = '';
+    addButton.disabled = true;
     return false;
 }
+
+// function previewCode(table, code) {
+//     if (code.startsWith('UKC19TRACING:1:')) {
+//         var token = code.replace('UKC19TRACING:1:', '');
+//         var decoded = jwt_decode(token);
+
+//         while (table.firstChild) {
+//             table.removeChild(table.lastChild);
+//         }
+//         addScanResultRow(table, Date.now(), decoded);
+
+//         return true;
+//     }
+
+//     return false;
+// }
 
 function addScanResultRow(table, timestamp, result) {
     let newRow = table.insertRow(0);
