@@ -11,8 +11,8 @@ function checkIn(table, code) {
 
 function previewCode(infoMessage, venueText, addButton, qrContent) {
     var code = qrContent.value;
-    console.log(code);
     if (code.startsWith('UKC19TRACING:1:')) {
+        console.log(code);
         var token = code.replace('UKC19TRACING:1:', '');
         var decoded = jwt_decode(token);
         console.log(decoded);
@@ -30,22 +30,6 @@ function previewCode(infoMessage, venueText, addButton, qrContent) {
     addButton.disabled = true;
     return false;
 }
-
-// function previewCode(table, code) {
-//     if (code.startsWith('UKC19TRACING:1:')) {
-//         var token = code.replace('UKC19TRACING:1:', '');
-//         var decoded = jwt_decode(token);
-
-//         while (table.firstChild) {
-//             table.removeChild(table.lastChild);
-//         }
-//         addScanResultRow(table, Date.now(), decoded);
-
-//         return true;
-//     }
-
-//     return false;
-// }
 
 function addScanResultRow(table, timestamp, result) {
     let newRow = table.insertRow(0);
