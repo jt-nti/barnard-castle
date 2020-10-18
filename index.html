@@ -26,6 +26,7 @@
 
     <link rel="stylesheet" type="text/css" href="css/bulma.min.css?v=1" />
     <link rel="stylesheet" type="text/css" href="css/castle.css?v=2" />
+    <script defer src="lib/fontawesome/js/all.js"></script>
 </head>
 
 <body>
@@ -37,6 +38,11 @@
             </p>
         </div>
         <button class="modal-close is-large" aria-label="close" id="stop-button"></button>
+        <button class="m-3 button is-rounded is-light is-outlined" aria-label="flash" id="flash-button">
+            <span class="icon is-small">
+                <i class="fas fa-bolt"></i>
+            </span>
+        </button>
     </section>
 
     <header class="hero">
@@ -50,15 +56,27 @@
                     <p>You can keep track of where you've been by saving check-ins in your browser, or just find out
                         what's in those huge QR codes!</p>
                 </div>
-                <div class="buttons has-addons">
-                    <button class="button is-primary" id="start-button">Scan QR</button>
-                    <button class="button" id="qr-paste-button">Paste QR Content</button>
+                <div class="buttons">
+                    <button class="button is-primary" id="start-button">
+                        <span class="icon is-small">
+                            <i class="fas fa-camera"></i>
+                        </span>
+                        <span>Scan</span>
+                    </button>
+                </div>
+                <div class="buttons are-small">
+                    <button class="button" id="qr-paste-button">
+                        <span class="icon is-small">
+                            <i class="fas fa-paste"></i>
+                        </span>
+                        <span>Paste QR Content</span>
+                    </button>
                 </div>
             </div>
         </div>
     </header>
 
-    <main class="section">
+    <main class="section pt-0">
         <div class="container">
             <div class="columns">
                 <div class="column">
@@ -78,13 +96,17 @@
                         <div class="field">
                             <label class="label" for="venue-text">Venue Details</label>
                             <div class="control">
-                                <textarea class="textarea is-info has-fixed-area" id="venue-text"
-                                    readonly></textarea>
+                                <textarea class="textarea is-info has-fixed-area" id="venue-text" readonly></textarea>
                             </div>
                         </div>
                         <div class="field is-grouped is-grouped-left">
                             <p class="control">
-                                <button class="button" id="add-button" disabled>Check in</button>
+                                <button class="button" id="add-button" disabled>
+                                    <span class="icon is-small">
+                                        <i class="fas fa-door-open"></i>
+                                    </span>
+                                    <span>Check in</span>
+                                </button>
                             </p>
                         </div>
                     </div>
@@ -92,11 +114,24 @@
                 <div class="column">
                     <div class="box">
                         <div class="content">
-                            <table class="table" id="qr-history">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Venue</th>
+                                        <th>ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qr-history"></tbody>
                             </table>
                             <div class="field is-grouped is-grouped-right">
                                 <p class="control">
-                                    <button class="button is-danger" id="clear-button">Clear history</button>
+                                    <button class="button is-danger" id="clear-button">
+                                        <span class="icon is-small">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </span>
+                                        <span>Clear history</span>
+                                    </button>
                                 </p>
                             </div>
                         </div>
@@ -115,13 +150,15 @@
         </div>
     </footer>
 
-    <script src="js/jsQR.js"></script>
-    <script src="js/load-image.js"></script>
-    <script src="js/jwt-decode.min.js"></script>
+    <script src="lib/jsQR.js"></script>
+    <script src="lib/load-image.js"></script>
+    <script src="lib/jwt-decode.min.js"></script>
     <script src="js/castle.js"></script>
     <script>
         const scanDialog = document.getElementById('scan-dialog');
         const startButton = document.getElementById('start-button');
+        const stopButton = document.getElementById('stop-button');
+        const flashButton = document.getElementById('flash-button');
         const pasteButton = document.getElementById('qr-paste-button');
         const video = document.getElementById('video');
         const infoMessage = document.getElementById('info-message');
@@ -164,7 +201,24 @@
             tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
         }
 
-        function start(useTorch) {
+        function toggleFlash() {
+            const stream = video.srcObject;
+            const track = stream.getVideoTracks()[0];
+
+            const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
+            const settings = track.getSettings();
+            const torchSetting = settings.torch;
+
+            if (!supportedConstraints.torch || torchSetting == undefined) {
+                console.log('No torch detected');
+                console.log('Supported constraints', supportedConstraints);
+                console.log('Settings', settings);
+                return;
+            }
+            track.applyConstraints({ advanced: [{ torch: !torchSetting }] });
+        }
+
+        function start() {
             document.documentElement.classList.add('is-clipped');
             scanDialog.classList.add('is-active');
 
@@ -173,17 +227,6 @@
                 video.srcObject = stream;
                 video.play();
 
-                if (useTorch) {
-                    const stream = video.srcObject;
-                    const tracks = stream.getTracks();
-
-                    // TODO handle "Unsupported constraint(s)" error
-                    tracks.forEach(function (track) {
-                        track.applyConstraints({
-                            advanced: [{ torch: true }]
-                        });
-                    });
-                }
                 tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
                 scanTimeoutId = setTimeout(function () {
                     qrContent.value = '';
@@ -213,12 +256,12 @@
         }
 
         startButton.addEventListener('click', () => {
-            start(false);
+            start();
         });
 
-        // document.getElementById('start-with-torch-button').addEventListener('click', () => {
-        //     start(true);
-        // });
+        flashButton.addEventListener('click', () => {
+            toggleFlash();
+        });
 
         pasteButton.addEventListener('click', () => {
             navigator.clipboard.readText().then(text => {
@@ -227,17 +270,17 @@
             });
         });
 
-        document.getElementById('stop-button').addEventListener('click', () => {
+        stopButton.addEventListener('click', () => {
             qrContent.value = '';
             previewCode(infoMessage, venueText, addButton, qrContent);
             stop();
         });
 
-        document.getElementById('add-button').addEventListener('click', () => {
+        addButton.addEventListener('click', () => {
             checkIn(qrHistory, qrContent.value);
         });
 
-        document.getElementById('clear-button').addEventListener('click', () => {
+        clearButton.addEventListener('click', () => {
             clearScans(qrHistory);
         });
 

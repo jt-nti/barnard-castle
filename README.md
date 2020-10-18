@@ -2,8 +2,14 @@
 
 Hack to scan NHS COVID-19 check-in QR codes
 
-Based on [jsQR](https://github.com/cozmo/jsQR) and [jwt-decode](https://github.com/auth0/jwt-decode)
+Built with:
 
+- [Bulma](https://bulma.io/)
+- [Font Awesome](https://fontawesome.com/)
+- [jsQR](https://github.com/cozmo/jsQR)
+- [jwt-decode](https://github.com/auth0/jwt-decode)
+
+## Development
 
 To test locally:
 
