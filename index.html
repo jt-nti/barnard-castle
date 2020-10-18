@@ -64,12 +64,25 @@
                         <span>Scan</span>
                     </button>
                 </div>
-                <div class="buttons are-small">
-                    <button class="button" id="qr-paste-button">
+                <div class="field is-grouped">
+                    <div class="control file is-small">
+                        <label class="file-label">
+                            <input class="file-input" type="file" accept="image/*" name="qr-file" id="qr-file">
+                            <span class="file-cta">
+                                <span class="file-icon">
+                                    <i class="fas fa-image"></i>
+                                </span>
+                                <span class="file-label">
+                                    Choose an image…
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                    <button class="control button is-small" id="qr-paste-button">
                         <span class="icon is-small">
                             <i class="fas fa-paste"></i>
                         </span>
-                        <span>Paste QR Content</span>
+                        <span>Paste UKC19TRACING text</span>
                     </button>
                 </div>
             </div>
@@ -151,7 +164,7 @@
     </footer>
 
     <script src="lib/jsQR.js"></script>
-    <script src="lib/load-image.js"></script>
+    <script src="lib/load-image.all.min.js"></script>
     <script src="lib/jwt-decode.min.js"></script>
     <script src="js/castle.js"></script>
     <script>
@@ -159,6 +172,7 @@
         const startButton = document.getElementById('start-button');
         const stopButton = document.getElementById('stop-button');
         const flashButton = document.getElementById('flash-button');
+        const fileInput = document.getElementById('qr-file');
         const pasteButton = document.getElementById('qr-paste-button');
         const video = document.getElementById('video');
         const infoMessage = document.getElementById('info-message');
@@ -185,7 +199,7 @@
                 canvasElement.width = video.videoWidth;
                 canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
                 var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-                var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
                 if (code) {
                     // barcode was found!
                     qrContent.value = code.data;
@@ -284,34 +298,35 @@
             clearScans(qrHistory);
         });
 
-    // document.getElementById('file-input').onchange = function () {
-    //     loadImage(
-    //         this.files[0],
-    //         function (img, data) {
-    //             // document.body.appendChild(img)
-    //             var canvasElement = document.createElement("canvas");            
-    //             var canvas = canvasElement.getContext("2d");
-    //             canvasElement.height = data.originalHeight;
-    //             canvasElement.width = data.originalWidth;
-    //             canvas.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
-    //             var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-    //             var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-    //             if (code) 
-    //             {
-    //                 // barcode was found!
-    //                 decodeData(code.data);
+        fileInput.onchange = function () {
+            const filename = this.files[0].name;
+            console.log(`Loading image ${filename}`);
 
-    //                 outputMessage.hidden = true;
-    //                 outputData.parentElement.hidden = false;
-    //                 outputData.innerText = data;
-    //             } else {
-    //                 alert("No code detected");
-    //             }
-    //         },
-    //         {
-    //             meta: true
-    //         } // Options
-    //     )}
+            const options = {
+                maxWidth: 600,
+                contain: true,
+                canvas: true
+            }
+            loadImage(this.files[0], options)
+                .then(function (data) {
+                    var canvasElement = data.image;
+                    var canvas = canvasElement.getContext("2d");
+                    var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                    if (code) {
+                        // barcode was found!
+                        qrContent.value = code.data;
+                    } else {
+                        qrContent.value = '';
+                    }
+                    previewCode(infoMessage, venueText, addButton, qrContent);
+                    fileInput.value = '';
+                })
+                .catch(function (err) {
+                    console.log(`Error loading image ${filename}`, err);
+                    fileInput.value = '';
+                });
+        }
     </script>
 </body>
 
