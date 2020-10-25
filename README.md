@@ -1,6 +1,6 @@
 # barnard-castle
 
-Hack to scan NHS COVID-19 check-in QR codes
+Hack to scan NHS COVID-19 check-in QR codes based on RevK's [How not to QR (NHS COVID-19 App)](https://www.revk.uk/2020/09/how-not-to-qr-nhs-c19-app.html) blog post
 
 Built with:
 
