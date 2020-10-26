@@ -1,0 +1,9 @@
+{
+    "engines": {
+        "node": "12.x"
+    },
+    "dependencies": {
+        "jsonwebtoken": "^8.5.1",
+        "mqtt": "^4.2.1"
+    }
+}
