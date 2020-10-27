@@ -1,33 +1,95 @@
-function checkIn(table, code) {
+function getVenue(code) {
+    var venue;
+
     if (code.startsWith('UKC19TRACING:1:')) {
         var token = code.replace('UKC19TRACING:1:', '');
-        var decoded = jwt_decode(token);
+        venue = jwt_decode(token);
+    }
 
-        // TODO: get timestamp from file modified date
-        addScanResultRow(table, Date.now(), decoded);
-        saveScan(Date.now(), token);
+    return venue;
+}
+
+function getLocation(qr, callback) {
+    function success(position) {
+        const location = {
+            qr: qr,
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+        };
+
+        callback(location);
+    }
+
+    function error() {
+        console.log('Using default location');
+        const location = {
+            qr: qr,
+            lat: 54.55,
+            lon: 1.92
+        };
+
+        callback(location);
+    }
+
+    if (!navigator.geolocation) {
+        error();
+    } else {
+        navigator.geolocation.getCurrentPosition(success, error);
     }
 }
 
-function previewCode(infoMessage, venueText, addButton, qrContent) {
-    var code = qrContent.value;
-    if (code.startsWith('UKC19TRACING:1:')) {
-        console.log(code);
-        var token = code.replace('UKC19TRACING:1:', '');
-        var decoded = jwt_decode(token);
-        console.log(decoded);
+function checkIn(table, code) {
+    var venue = getVenue(code);
 
-        var preview = `${decoded.opn || 'Unknown'}\n${decoded.pc || 'Unknown'}\n${decoded.id || 'Unknown'}`
+    if (venue) {
+        var time = Date.now();
+        addScanResultRow(table, time, venue);
+        saveScan(time, token);
+    }
+}
+
+function publishVenue(code) {
+    httpRequest = new XMLHttpRequest();
+
+    if (!httpRequest) {
+        console.log('Cannot create XMLHTTP instance');
+        return false;
+    }
+
+    const url = 'https://covidqr.nti.me.uk/api/venue';
+
+    getLocation(code, function (location) {
+        console.log('Publishing', location);
+        const body = JSON.stringify(location);
+
+        httpRequest.open('POST', url);
+        httpRequest.setRequestHeader('Content-Type', 'application/json');
+        httpRequest.send(body);
+    });
+}
+
+function previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent) {
+    var code = qrContent.value;
+    var venue = getVenue(code);
+
+    if (venue) {
+        console.log(code);
+        console.log(venue);
+
+        var preview = `${venue.opn || 'Unknown'}\n${venue.pc || 'Unknown'}\n${venue.id || 'Unknown'}`
 
         infoMessage.classList.add('is-hidden');
         venueText.value = preview;
         addButton.disabled = false;
+        shareButton.disabled = false;
+        venueBox.scrollIntoView({behavior: "smooth", inline: "nearest"});
         return true;
     }
 
     infoMessage.classList.remove('is-hidden');
     venueText.value = '';
     addButton.disabled = true;
+    shareButton.disabled = true;
     return false;
 }
 
