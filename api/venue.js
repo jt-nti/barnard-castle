@@ -67,7 +67,7 @@ module.exports = (req, res) => {
     // Publish the venue
     var message = {
         id: venue.id,
-        pc: venue.pc,
+        postcode: venue.pc,
         lat: req.body.lat,
         lon: req.body.lon
     }
