@@ -66,8 +66,11 @@
 
                 <div class="content">
                     <p>Simple app to scan NHS COVID-19 QR codes if you cannot use the official app.</p>
-                    <p>You can keep track of where you've been by saving check-ins in your browser, or just find out
+                    <p>You can keep track of where you've been by saving check-ins in your browser, publish the location of venues, or just find out
                         what's in those huge QR codes!</p>
+                    <h3>Privacy</h3>
+                    <p>No personal data is collected by this app. Check-ins are stored on your device and can be removed using the <b>Clear history</b> button at any time.</p>
+                    <p>If you choose to publish location venues, only the contents of the QR code and location data will be sent.</p>
                 </div>
                 <div class="buttons">
                     <button class="button is-primary" id="start-button">
@@ -111,7 +114,7 @@
                             No NHS COVID-19 QR code detected
                         </div>
                     </div>
-                    <div class="box">
+                    <div class="box" id="venue-box">
                         <div class="field is-hidden">
                             <label class="label" for="qr-content">QR Code Contents</label>
                             <div class="control">
@@ -132,6 +135,14 @@
                                         <i class="fas fa-door-open"></i>
                                     </span>
                                     <span>Check in</span>
+                                </button>
+                            </p>
+                            <p class="control">
+                                <button class="button" id="share-button" disabled>
+                                    <span class="icon is-small">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </span>
+                                    <span>Publish venue</span>
                                 </button>
                             </p>
                         </div>
@@ -191,7 +202,9 @@
         const infoMessage = document.getElementById('info-message');
         const qrContent = document.getElementById('qr-content');
         const venueText = document.getElementById('venue-text');
+        const venueBox = document.getElementById('venue-box');
         const addButton = document.getElementById('add-button');
+        const shareButton = document.getElementById('share-button');
         const qrHistory = document.getElementById('qr-history');
         const clearButton = document.getElementById('clear-button');
 
@@ -216,7 +229,7 @@
                 if (code) {
                     // barcode was found!
                     qrContent.value = code.data;
-                    if (previewCode(infoMessage, venueText, addButton, qrContent)) {
+                    if (previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent)) {
                         stop();
                         return;
                     }
@@ -257,7 +270,7 @@
                 tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
                 scanTimeoutId = setTimeout(function () {
                     qrContent.value = '';
-                    previewCode(infoMessage, venueText, addButton, qrContent);
+                    previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent);
                     stop();
                 }, 99 * tickDuration);
             });
@@ -293,18 +306,22 @@
         pasteButton.addEventListener('click', () => {
             navigator.clipboard.readText().then(text => {
                 qrContent.value = text;
-                previewCode(infoMessage, venueText, addButton, qrContent);
+                previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent);
             });
         });
 
         stopButton.addEventListener('click', () => {
             qrContent.value = '';
-            previewCode(infoMessage, venueText, addButton, qrContent);
+            previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent);
             stop();
         });
 
         addButton.addEventListener('click', () => {
             checkIn(qrHistory, qrContent.value);
+        });
+
+        shareButton.addEventListener('click', () => {
+            publishVenue(qrContent.value);
         });
 
         clearButton.addEventListener('click', () => {
@@ -332,7 +349,7 @@
                     } else {
                         qrContent.value = '';
                     }
-                    previewCode(infoMessage, venueText, addButton, qrContent);
+                    previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent);
                     fileInput.value = '';
                 })
                 .catch(function (err) {
