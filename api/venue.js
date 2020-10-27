@@ -72,12 +72,10 @@ module.exports = (req, res) => {
         lon: req.body.lon
     }
 
-    let jsonMessage = JSON.stringify(message, null, 2);
-
     var mqttClient = mqtt.connect(mqttServer);
 
     mqttClient.on('connect', function () {
-        mqttClient.publish(mqttTopic, jsonMessage, function () {
+        mqttClient.publish(mqttTopic, JSON.stringify(message), function () {
             mqttClient.end();
             return res.status(202).json(message);
         });
