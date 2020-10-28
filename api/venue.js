@@ -69,7 +69,8 @@ module.exports = (req, res) => {
         id: venue.id,
         postcode: venue.pc,
         lat: req.body.lat,
-        lon: req.body.lon
+        lon: req.body.lon,
+        timestamp: Date.now()
     }
 
     var mqttClient = mqtt.connect(mqttServer);
