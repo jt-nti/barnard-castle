@@ -70,7 +70,7 @@ module.exports = (req, res) => {
         postcode: venue.pc,
         lat: req.body.lat,
         lon: req.body.lon,
-        timestamp: Date.now()
+        timestamp: (new Date()).toISOString()
     }
 
     var mqttClient = mqtt.connect(mqttServer);
