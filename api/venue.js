@@ -68,8 +68,8 @@ module.exports = (req, res) => {
     var message = {
         id: venue.id,
         postcode: venue.pc,
-        lat: req.body.lat,
-        lon: req.body.lon,
+        lat: Math.round(req.body.lat * 100000) / 100000,
+        lon: Math.round(req.body.lon * 100000) / 100000,
         timestamp: (new Date()).toISOString()
     }
 
