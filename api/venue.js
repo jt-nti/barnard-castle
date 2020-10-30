@@ -73,12 +73,14 @@ module.exports = (req, res) => {
         timestamp: (new Date()).toISOString()
     }
 
-    var mqttClient = mqtt.connect(mqttServer);
+    // var mqttClient = mqtt.connect(mqttServer);
 
-    mqttClient.on('connect', function () {
-        mqttClient.publish(mqttTopic, JSON.stringify(message), function () {
-            mqttClient.end();
-            return res.status(202).json(message);
-        });
-    });
+    // mqttClient.on('connect', function () {
+    //     mqttClient.publish(mqttTopic, JSON.stringify(message), function () {
+    //         mqttClient.end();
+    //         return res.status(202).json(message);
+    //     });
+    // });
+
+    return res.status(202).json(message);
 }

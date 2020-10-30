@@ -1,5 +1,5 @@
 [[redirects]]
   from = "/api/*"
-  to = "https://barnard-castle.vercel.app/api/:splat"
+  to = "https://barnard-castle-git-publish-ui.jtonline.vercel.app/api/:splat"
   status = 200
   force = true

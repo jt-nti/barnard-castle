@@ -48,7 +48,9 @@ function checkIn(table, code) {
     }
 }
 
-function publishVenue(code) {
+function publishVenue(shareButton, code) {
+    shareButton.classList.add('is-loading');
+
     httpRequest = new XMLHttpRequest();
 
     if (!httpRequest) {
@@ -56,12 +58,23 @@ function publishVenue(code) {
         return false;
     }
 
-    const url = 'https://covidqr.nti.me.uk/api/venue';
+    function success(position) {
+        shareButton.disabled = true;
+        shareButton.classList.remove('is-loading');
+    }
+
+    function error() {
+        shareButton.classList.remove('is-loading');
+    }
+
+    const url = 'https://deploy-preview-40--jovial-murdock-8b251f.netlify.app/api/venue';
 
     getLocation(code, function (location) {
         console.log('Publishing', location);
         const body = JSON.stringify(location);
 
+        httpRequest.onload = success;
+        httpRequest.error = error;
         httpRequest.open('POST', url);
         httpRequest.setRequestHeader('Content-Type', 'application/json');
         httpRequest.send(body);
