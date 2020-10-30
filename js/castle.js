@@ -24,8 +24,8 @@ function getLocation(qr, callback) {
         console.log('Using default location');
         const location = {
             qr: qr,
-            lat: 54.55,
-            lon: 1.92
+            lat: 54.54335,
+            lon: -1.92698
         };
 
         callback(location);
