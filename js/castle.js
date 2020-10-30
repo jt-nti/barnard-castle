@@ -1,11 +1,26 @@
-function getVenue(code) {
-    var venue;
+function getToken(code) {
+    var token;
 
     if (code.startsWith('UKC19TRACING:1:')) {
-        var token = code.replace('UKC19TRACING:1:', '');
-        venue = jwt_decode(token);
+        token = code.replace('UKC19TRACING:1:', '');
     }
 
+    return token;
+}
+
+function getVenue(token) {
+    var venue;
+
+    try {
+        const decoded = jwt_decode(token);
+
+        if (decoded.id) {
+            venue = decoded;
+        }
+    } catch(err) {
+        // Invalid token
+    }
+    
     return venue;
 }
 
@@ -39,10 +54,11 @@ function getLocation(qr, callback) {
 }
 
 function checkIn(table, code) {
-    var venue = getVenue(code);
+    const token = getToken(code);
+    const venue = getVenue(code);
 
     if (venue) {
-        var time = Date.now();
+        const time = Date.now();
         addScanResultRow(table, time, venue);
         saveScan(time, token);
     }
@@ -69,14 +85,15 @@ function publishVenue(code) {
 }
 
 function previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent) {
-    var code = qrContent.value;
-    var venue = getVenue(code);
+    const code = qrContent.value;
+    const token = getToken(code); 
+    const venue = getVenue(token);
 
     if (venue) {
         console.log(code);
         console.log(venue);
 
-        var preview = `${venue.opn || 'Unknown'}\n${venue.pc || 'Unknown'}\n${venue.id || 'Unknown'}`
+        const preview = `${venue.opn || 'Unknown'}\n${venue.pc || 'Unknown'}\n${venue.id || 'Unknown'}`
 
         infoMessage.classList.add('is-hidden');
         venueText.value = preview;
@@ -156,8 +173,8 @@ function loadScans(table) {
         db.transaction(storeName).objectStore(storeName).openCursor().onsuccess = function (event) {
             let cursor = event.target.result;
             if (cursor) {
-                var decoded = jwt_decode(cursor.value);
-                addScanResultRow(table, cursor.key, decoded);
+                const venue = getVenue(cursor.value);
+                addScanResultRow(table, cursor.key, venue);
                 cursor.continue();
             }
             else {
