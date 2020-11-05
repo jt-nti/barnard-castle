@@ -66,40 +66,49 @@
 
                 <div class="content">
                     <p>Simple app to scan NHS COVID-19 QR codes if you cannot use the official app.</p>
-                    <p>You can keep track of where you've been by saving check-ins in your browser, publish the location of venues, or just find out
+                    <p>You can keep track of where you've been by saving check-ins in your browser, publish the location
+                        of venues, or just find out
                         what's in those huge QR codes!</p>
                     <h3>Privacy</h3>
-                    <p>No personal data is collected by this app. Check-ins are stored on your device and can be removed using the <b>Clear history</b> button at any time.</p>
-                    <p>If you choose to publish location venues, only the contents of the QR code and location data will be sent.</p>
+                    <p>No personal data is collected by this app. Check-ins are stored on your device and can be removed
+                        using the <b>Clear history</b> button at any time.</p>
+                    <p>If you choose to publish location venues, only the contents of the QR code and location data will
+                        be sent.</p>
                 </div>
                 <div class="buttons">
-                    <button class="button is-primary" id="start-button">
+                    <button class="button is-primary has-text-weight-semibold is-medium" id="start-button">
                         <span class="icon is-small">
                             <i class="fas fa-camera"></i>
                         </span>
                         <span>Scan</span>
                     </button>
                 </div>
-                <div class="field is-grouped">
-                    <div class="control file is-small">
-                        <label class="file-label">
-                            <input class="file-input" type="file" accept="image/*" name="qr-file" id="qr-file">
-                            <span class="file-cta">
-                                <span class="file-icon">
-                                    <i class="fas fa-image"></i>
-                                </span>
-                                <span class="file-label">
-                                    Choose an image…
-                                </span>
-                            </span>
-                        </label>
+                <div class="field is-grouped is-grouped-multiline">
+                    <div class="control">
+                        <div class="button is-light" id="file-button">
+                            <div class="file is-light">
+                                <label class="file-label">
+                                    <input class="file-input" type="file" accept="image/*" name="qr-file" id="qr-file">
+                                    <span class="file-cta">
+                                        <span class="file-icon">
+                                            <i class="fas fa-image"></i>
+                                        </span>
+                                        <span class="file-label">
+                                            Choose an image…
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                    <button class="control button is-small" id="qr-paste-button">
-                        <span class="icon is-small">
-                            <i class="fas fa-paste"></i>
-                        </span>
-                        <span>Paste UKC19TRACING text</span>
-                    </button>
+                    <div class="control">
+                        <button class="button is-light" id="qr-paste-button">
+                            <span class="icon is-small">
+                                <i class="fas fa-paste"></i>
+                            </span>
+                            <span>Paste UKC19TRACING text</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -109,8 +118,8 @@
         <div class="container">
             <div class="columns">
                 <div class="column">
-                    <div id="info-message" class="message is-info is-hidden">
-                        <div class="message-body">
+                    <div id="no-nhsqr-message" class="message is-info is-hidden">
+                        <div class="message-body has-text-black">
                             No NHS COVID-19 QR code detected
                         </div>
                     </div>
@@ -147,6 +156,16 @@
                             </p>
                         </div>
                     </div>
+                    <div id="publish-success-message" class="message is-success is-hidden">
+                        <div class="message-body has-text-black">
+                            Thank you, venue location published
+                        </div>
+                    </div>
+                    <div id="publish-fail-message" class="message is-warning is-hidden">
+                        <div class="message-body has-text-black">
+                            Sorry, could not publish venue location
+                        </div>
+                    </div>
                 </div>
                 <div class="column">
                     <div class="box">
@@ -163,7 +182,7 @@
                             </table>
                             <div class="field is-grouped is-grouped-right">
                                 <p class="control">
-                                    <button class="button is-danger" id="clear-button">
+                                    <button class="button is-danger has-background-danger-dark" id="clear-button">
                                         <span class="icon is-small">
                                             <i class="fas fa-trash-alt"></i>
                                         </span>
@@ -181,7 +200,7 @@
     <footer class="footer">
         <div class="content has-text-centered">
             <p>
-                <a href="https://github.com/jt-nti/barnard-castle">Source code on
+                <a href="https://github.com/jt-nti/barnard-castle" class="has-text-link-dark">Source code on
                     GitHub</a>.
             </p>
         </div>
@@ -192,21 +211,31 @@
     <script src="lib/jwt-decode.min.js"></script>
     <script src="js/castle.js"></script>
     <script>
-        const scanDialog = document.getElementById('scan-dialog');
         const startButton = document.getElementById('start-button');
         const stopButton = document.getElementById('stop-button');
         const flashButton = document.getElementById('flash-button');
         const fileInput = document.getElementById('qr-file');
         const pasteButton = document.getElementById('qr-paste-button');
         const video = document.getElementById('video');
-        const infoMessage = document.getElementById('info-message');
         const qrContent = document.getElementById('qr-content');
-        const venueText = document.getElementById('venue-text');
-        const venueBox = document.getElementById('venue-box');
         const addButton = document.getElementById('add-button');
         const shareButton = document.getElementById('share-button');
         const qrHistory = document.getElementById('qr-history');
         const clearButton = document.getElementById('clear-button');
+
+        var state = new State(document.documentElement,
+            document.getElementById('scan-dialog'),
+            document.getElementById('start-button'),
+            document.getElementById('file-button'),
+            document.getElementById('qr-file'),
+            document.getElementById('qr-paste-button'),
+            document.getElementById('no-nhsqr-message'),
+            document.getElementById('venue-text'),
+            document.getElementById('venue-box'),
+            document.getElementById('add-button'),
+            document.getElementById('share-button'),
+            document.getElementById('publish-success-message'),
+            document.getElementById('publish-fail-message'));
 
         initDb().then(function (response) {
             db = response;
@@ -229,7 +258,7 @@
                 if (code) {
                     // barcode was found!
                     qrContent.value = code.data;
-                    if (previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent)) {
+                    if (previewCode(state, qrContent)) {
                         stop();
                         return;
                     }
@@ -259,8 +288,8 @@
         }
 
         function start() {
-            document.documentElement.classList.add('is-clipped');
-            scanDialog.classList.add('is-active');
+            qrContent.value = '';
+            state.startScan()
 
             // Use facingMode: environment to attemt to get the front camera on phones
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
@@ -269,8 +298,7 @@
 
                 tickTimeoutId = setTimeout(function () { tick(); }, tickDuration);
                 scanTimeoutId = setTimeout(function () {
-                    qrContent.value = '';
-                    previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent);
+                    previewCode(state, qrContent);
                     stop();
                 }, 99 * tickDuration);
             });
@@ -291,8 +319,7 @@
 
             video.srcObject = null;
 
-            document.documentElement.classList.remove('is-clipped');
-            scanDialog.classList.remove('is-active');
+            state.scanFinished();
         }
 
         startButton.addEventListener('click', () => {
@@ -306,13 +333,13 @@
         pasteButton.addEventListener('click', () => {
             navigator.clipboard.readText().then(text => {
                 qrContent.value = text;
-                previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent);
+                previewCode(state, qrContent);
             });
         });
 
         stopButton.addEventListener('click', () => {
             qrContent.value = '';
-            previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent);
+            previewCode(state, qrContent);
             stop();
         });
 
@@ -321,7 +348,7 @@
         });
 
         shareButton.addEventListener('click', () => {
-            publishVenue(qrContent.value);
+            publishVenue(state, qrContent.value);
         });
 
         clearButton.addEventListener('click', () => {
@@ -329,11 +356,12 @@
         });
 
         fileInput.onchange = function () {
+            state.loadImage();
             const filename = this.files[0].name;
             console.log(`Loading image ${filename}`);
 
             const options = {
-                maxWidth: 600,
+                maxWidth: 640,
                 contain: true,
                 canvas: true
             }
@@ -349,12 +377,14 @@
                     } else {
                         qrContent.value = '';
                     }
-                    previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent);
+                    previewCode(state, qrContent);
                     fileInput.value = '';
+                    state.loadImageComplete();
                 })
                 .catch(function (err) {
                     console.log(`Error loading image ${filename}`, err);
                     fileInput.value = '';
+                    state.loadImageComplete();
                 });
         }
     </script>

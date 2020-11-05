@@ -2,3 +2,14 @@
     background: #222;
     width: 90%;
 }
+
+#file-button {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.button.is-light:focus, .button.is-light:focus:not(:active) {
+    border-color: #3273dc;
+    color: #363636;
+    box-shadow: 0 0 0 0.125em rgba(50,115,220,.25);
+}

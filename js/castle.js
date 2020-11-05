@@ -1,3 +1,129 @@
+class State {
+    #document;
+    #scanDialog;
+    #startButton;
+    #fileButton;
+    #fileInput;
+    #pasteButton;
+    #qrMessage;
+    #venueText;
+    #venueBox;
+    #addButton;
+    #shareButton;
+    #publishSuccess;
+    #publishFail;
+
+    constructor(document,
+                scanDialog,
+                startButton,
+                fileButton,
+                fileInput,
+                pasteButton,
+                qrMessage,
+                venueText,
+                venueBox,
+                addButton,
+                shareButton,
+                publishSuccess,
+                publishFail) {
+        this.#document = document;
+        this.#scanDialog = scanDialog;
+        this.#startButton = startButton;
+        this.#fileButton = fileButton;
+        this.#fileInput = fileInput;
+        this.#pasteButton = pasteButton;
+        this.#qrMessage = qrMessage;
+        this.#venueText = venueText;
+        this.#venueBox = venueBox;
+        this.#addButton = addButton;
+        this.#shareButton = shareButton;
+        this.#publishSuccess = publishSuccess;
+        this.#publishFail = publishFail;
+    }
+
+    startScan() {
+        this.#addButton.disabled = true;
+        this.#shareButton.disabled = true;
+
+        this.#document.classList.add('is-clipped');
+        this.#scanDialog.classList.add('is-active');
+    }
+
+    scanFinished() {
+        this.#document.classList.remove('is-clipped');
+        this.#scanDialog.classList.remove('is-active');
+    }
+
+    loadImage() {
+        this.#startButton.disabled = true;
+        this.#fileButton.setAttribute('disabled', 'true');
+        this.#fileInput.disabled = true;
+        this.#pasteButton.disabled = true;
+    }
+
+    loadImageComplete() {
+        this.#startButton.disabled = false;
+        this.#fileButton.removeAttribute('disabled');
+        this.#fileInput.disabled = false;
+        this.#pasteButton.disabled = false;
+    }
+
+    previewVenue(preview) {
+        this.#venueText.value = preview;
+        this.#addButton.disabled = false;
+        this.#shareButton.disabled = false;
+
+        this.#qrMessage.classList.add('is-hidden');
+        this.#publishSuccess.classList.add('is-hidden');
+        this.#publishFail.classList.add('is-hidden');
+
+        this.#venueBox.scrollIntoView({ behavior: "smooth", inline: "nearest" });
+    }
+
+    resetVenue() {
+        this.#venueText.value = '';
+        this.#addButton.disabled = true;
+        this.#shareButton.disabled = true;
+
+        this.#qrMessage.classList.remove('is-hidden');
+        this.#publishSuccess.classList.add('is-hidden');
+        this.#publishFail.classList.add('is-hidden');
+    }
+
+    publishVenue() {
+        this.#shareButton.disabled = true;
+
+        this.#startButton.disabled = true;
+        this.#fileButton.setAttribute('disabled', 'true');
+        this.#fileInput.disabled = true;
+        this.#pasteButton.disabled = true;
+
+        this.#publishSuccess.classList.add('is-hidden');
+        this.#publishFail.classList.add('is-hidden');
+    }
+
+    publishComplete() {
+        this.#shareButton.disabled = false;
+
+        this.#startButton.disabled = false;
+        this.#fileButton.removeAttribute('disabled');
+        this.#fileInput.disabled = false;
+        this.#pasteButton.disabled = false;
+    }
+
+    publishSucceeded() {
+        this.publishComplete();
+        this.#publishSuccess.classList.remove('is-hidden');
+        this.#publishSuccess.scrollIntoView({ behavior: "smooth", inline: "nearest" });
+    }
+
+    publishFailed() {
+        this.publishComplete();
+        this.#publishFail.classList.remove('is-hidden');
+        this.#publishFail.scrollIntoView({ behavior: "smooth", inline: "nearest" });
+    }
+}
+
 function getToken(code) {
     var token;
 
@@ -17,10 +143,10 @@ function getVenue(token) {
         if (decoded.id) {
             venue = decoded;
         }
-    } catch(err) {
+    } catch (err) {
         // Invalid token
     }
-    
+
     return venue;
 }
 
@@ -64,7 +190,7 @@ function checkIn(table, code) {
     }
 }
 
-function publishVenue(code) {
+function publishVenue(state, code) {
     httpRequest = new XMLHttpRequest();
 
     if (!httpRequest) {
@@ -72,21 +198,32 @@ function publishVenue(code) {
         return false;
     }
 
+    function success() {
+        state.publishSucceeded();
+    }
+
+    function error() {
+        state.publishFailed();
+    }
+
     const url = 'https://covidqr.nti.me.uk/api/venue';
 
+    state.publishVenue();
     getLocation(code, function (location) {
         console.log('Publishing', location);
         const body = JSON.stringify(location);
 
+        httpRequest.onload = success;
+        httpRequest.error = error;
         httpRequest.open('POST', url);
         httpRequest.setRequestHeader('Content-Type', 'application/json');
         httpRequest.send(body);
     });
 }
 
-function previewCode(infoMessage, venueText, venueBox, addButton, shareButton, qrContent) {
+function previewCode(state, qrContent) {
     const code = qrContent.value;
-    const token = getToken(code); 
+    const token = getToken(code);
     const venue = getVenue(token);
 
     if (venue) {
@@ -95,18 +232,11 @@ function previewCode(infoMessage, venueText, venueBox, addButton, shareButton, q
 
         const preview = `${venue.opn || 'Unknown'}\n${venue.pc || 'Unknown'}\n${venue.id || 'Unknown'}`
 
-        infoMessage.classList.add('is-hidden');
-        venueText.value = preview;
-        addButton.disabled = false;
-        shareButton.disabled = false;
-        venueBox.scrollIntoView({behavior: "smooth", inline: "nearest"});
+        state.previewVenue(preview);
         return true;
     }
 
-    infoMessage.classList.remove('is-hidden');
-    venueText.value = '';
-    addButton.disabled = true;
-    shareButton.disabled = true;
+    state.resetVenue();
     return false;
 }
 
